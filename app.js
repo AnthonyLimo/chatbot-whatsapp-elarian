@@ -1,32 +1,44 @@
+require("dotenv").config();
 const { Elarian } = require("elarian");
 const log = require("signale");
 
 let client;
 
 const whatsappChannel = {
-    number: "+254711001002",
+    number: process.env.WHATSAPP_NUMBER,
     channel: "whatsapp"
 };
 const voiceChannel ={
-    number: "+254700112233",
+    number: process.env.VOICE_NUMBER,
     channel: "voice"
 };
 
 const stateHandlers = {
+
+    /*
+    In this initialState the user is presented with the initial text of the whatsapp session
+    They will provide and input that will be handled by the recordIssueState
+    In the event that something goes wrong, the state handler should return the same menu but with an
+    apology and resending the initial message afterwards
+    */
+
     initialState: async (ntf, cust, appData) => {
-        console.log(ntf.text);
-        console.log("SHow customer: ", cust);
+
+        log.info(`Current Customer Data on Level 1: ${appData}`);
 
         if (ntf.text) {
-            cust.sendMessage(whatsappChannel, {
+            let resp = await cust.sendMessage(whatsappChannel, {
                 body: {
                     text: "Hi there, I'm Cindy, your customer support bot. How can I help?\n1. Report an issue with your order \n2. Report an issue with the rider\n3. Request a call from one of our agents"
                 }
             });
 
-            return { state: "recordIssueState" };
+            log.success(`First initial message sent: ${resp}`);
         }
+
+        return { state: "recordIssueState" };
     },
+
     recordIssueState: async (ntf, cust, appData) => {
         console.log(appData);
         console.log(ntf.text);
@@ -35,79 +47,115 @@ const stateHandlers = {
 
         if (ntf.text === "1") {
 
-            cust.sendMessage(whatsappChannel, {
-                body: {
-                    text: "We're sorry about the issue you faced with your order. Could you provide some more information on what happened?"
-                }
-            });
-            cust.updateAppData({
-                state: "callCustomerIssueState"
-            });
+            try {
+                let resp = await cust.sendMessage(whatsappChannel, {
+                    body: {
+                        text: "We're sorry about the issue you faced with your order. Could you provide some more information on what happened?"
+                    }
+                });
+                // cust.updateAppData({
+                //     state: "callCustomerIssueState"
+                // });
+
+                log.success(`Option 1 selected. Response: ${resp}`);
+
+                return { state: "callCustomerIssueState" }
+            } catch (error) {
+                log.error(`Something went wrong: ${error}`);
+            }
 
         } else if (ntf.text === "2") {
 
-            cust.sendMessage(whatsappChannel, {
-                body: {
-                    text: "We're sorry about the issue you faced with your rider. Could you provide some more information on what happened?"
-                }
-            });
-            // cust.updateAppData({
-            //     state: "callCustomerIssueState"
-            // });
+            try {
+                let resp = await cust.sendMessage(whatsappChannel, {
+                    body: {
+                        text: "We're sorry about the issue you faced with your rider. Could you provide some more information on what happened?"
+                    }
+                });
 
-            return { state: "callCustomerIssueState" };
+                log.success(`Option 2 selected. Response: ${resp}`);
+
+                return { state: "callCustomerIssueState" };
+            } catch (error) {
+                log.error(`Something went wrong: ${error}`);
+            }
 
         } else if (ntf.text === "3") {
 
-            cust.sendMessage(whatsappChannel, {
-                body: {
-                    text: "We're sorry about the issue you faced. One of our agents will reach out to you shortly."
-                }
-            });
+            try {
 
-            setInterval(() => {
-                cust.sendMessage(voiceChannel, {
+                let resp = await cust.sendMessage(whatsappChannel, {
                     body: {
-                        text: {
-                            say: {
-                                voice: "male",
-                                text: "This is an automated call"
+                        text: "We're sorry about the issue you faced. One of our agents will reach out to you shortly."
+                    }
+                });
+
+                log.success(`Option 3 selected. Response: ${resp}`);
+
+                setTimeout(async () => {
+                    let voiceResp = await cust.sendMessage(voiceChannel, {
+                        body: {
+                            text: {
+                                say: {
+                                    voice: "male",
+                                    text: "This is an automated call"
+                                }
                             }
                         }
-                    }
-                })
-            }, 5000);
+                    });
 
-            cust.deleteAppData();
+                    log.info(`Voice call made: ${voiceResp}`);
+                }, 5000);
+
+                return { state: "initialState" };
+
+            } catch (error) {
+                log.error(`Something wrong: ${error}`);
+            }
         } else {
-            cust.sendMessage(whatsappChannel, {
-                body: {
-                    text: "I'm sorry. It seems you selected an option I can't perform. Please try again.\n1. Report an issue with your order \n2. Report an issue with the rider\n3. Request a call from one of our agent"
-                }
-            });
+            try {
+                const resp = await cust.sendMessage(whatsappChannel, {
+                    body: {
+                        text: "I'm sorry. It seems you selected an option I can't perform. Please try again.\n1. Report an issue with your order \n2. Report an issue with the rider\n3. Request a call from one of our agent"
+                    }
+                });
 
-            // cust.updateAppData({
-            //     state: "recordIssueState"
-            // });
+                log.warn(`Things went wrong: ${resp}`);
 
-            return { state: "recordIssueState" };
+                return { state: "recordIssueState" };
+            } catch(error) {
+                log.error(error);
+            }
         }
     },
+
     callCustomerIssueState: async (ntf, cust) => {
         console.log(ntf.text);
 
-        cust.sendMessage(voiceChannel, {
-            body: {
-                text: {
-                    say: {
-                        voice: "male",
-                        text: "This is an automated call. Imagine rainbows flying"
-                    }
+        try {
+            const resp = await cust.sendMessage(voiceChannel, {
+                body: {
+                    voice: [
+                        {
+                            say: {
+                                text: "We'll give you a call shortly",
+                                voice: "male"
+                            }
+                        }
+                    ]
                 }
-            }
-        });
+            });
 
-        cust.deleteAppData();
+            log.info(`Customer called on number ${cust.customerNumber.number} with the following response: ${resp}`);
+
+            await cust.deleteAppData();
+
+        }  catch(error) {
+
+            log.error(`Something went wrong ${error}`);
+
+        }
+
     }
 };
 
@@ -126,19 +174,20 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
 
     const nextState = await stateHandlers[state](notification, customer, appData);
 
+
     callback(null, nextState);
 }
 
 const start = () => {
     client = new Elarian({
-        appId: "el_app_rEpRxF",
-        orgId: "el_org_eu_korGaF",
-        apiKey: "el_k_test_ecf7d8227577e2a378a2ff83ef8ac6f799424d379615cdf3ed2636b655876acd"
+        appId: process.env.APP_ID,
+        orgId: process.env.ORG_ID,
+        apiKey: process.env.API_KEY
     });
 
     client
-        .on("error", (error) => console.log(`Something went wrong: ${error}`))
-        .on("connected", () => console.log("App connected..."))
+        .on("error", (error) => log.error(`Something went wrong: ${error}`))
+        .on("connected", () => log.success("App connected..."))
         .on("receivedWhatsapp", handleWhatsappMessages)
         .connect();
 };
