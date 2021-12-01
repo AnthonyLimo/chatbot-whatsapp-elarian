@@ -1,5 +1,6 @@
 require("dotenv").config();
 const { Elarian } = require("elarian");
+const { await } = require("signale");
 const log = require("signale");
 
 let client;
@@ -24,19 +25,25 @@ const stateHandlers = {
 
     initialState: async (ntf, cust, appData) => {
 
-        log.info(`Current Customer Data on Level 1: ${appData}`);
+        try {
+            log.info(`Current Customer Data on Level 1: ${appData}`);
 
-        if (ntf.text) {
-            let resp = await cust.sendMessage(whatsappChannel, {
-                body: {
-                    text: "Hi there, I'm Cindy, your customer support bot. How can I help?\n1. Report an issue with your order \n2. Report an issue with the rider\n3. Request a call from one of our agents"
-                }
-            });
+            if (ntf.text) {
+                let resp = await cust.sendMessage(whatsappChannel, {
+                    body: {
+                        text: "Hi there, I'm Cindy, your customer support bot. How can I help?\n1. Report an issue with your order \n2. Report an issue with the rider\n3. Request a call from one of our agents"
+                    }
+                });
 
-            log.success(`First initial message sent: ${resp}`);
+                log.success(`First initial message sent: ${resp}`);
+            }
+
+            return { state: "recordIssueState" };
+        } catch (error) {
+            log.error(`Something went wrong: ${error}`);
+
+            return { state: "initialState" };
         }
-
-        return { state: "recordIssueState" };
     },
 
     recordIssueState: async (ntf, cust, appData) => {
@@ -62,6 +69,8 @@ const stateHandlers = {
                 return { state: "callCustomerIssueState" }
             } catch (error) {
                 log.error(`Something went wrong: ${error}`);
+
+                return { state: "recordIssueState" }
             }
 
         } else if (ntf.text === "2") {
@@ -78,6 +87,8 @@ const stateHandlers = {
                 return { state: "callCustomerIssueState" };
             } catch (error) {
                 log.error(`Something went wrong: ${error}`);
+
+                return { state: "recordIssueState" };
             }
 
         } else if (ntf.text === "3") {
@@ -111,6 +122,8 @@ const stateHandlers = {
 
             } catch (error) {
                 log.error(`Something wrong: ${error}`);
+
+                return { state: "recordIssueState" };
             }
         } else {
             try {
@@ -125,6 +138,8 @@ const stateHandlers = {
                 return { state: "recordIssueState" };
             } catch(error) {
                 log.error(error);
+
+                return { state: "recordIssueState" };
             }
         }
     },
@@ -140,7 +155,7 @@ const stateHandlers = {
                             say: {
                                 text: "We'll give you a call shortly",
                                 voice: "male"
-                            }
+                            },
                         }
                     ]
                 }
@@ -148,7 +163,11 @@ const stateHandlers = {
 
             log.info(`Customer called on number ${cust.customerNumber.number} with the following response: ${resp}`);
 
-            await cust.deleteAppData();
+            // const thisResp = await cust.deleteAppData();
+
+            // log.warn(`Here it is: ${JSON.stringify(thisResp, null, 2)}`);
+
+            return { state: "initialState" };
 
         }  catch(error) {
 
@@ -160,23 +179,53 @@ const stateHandlers = {
 };
 
 async function handleWhatsappMessages(notification, customer, appData, callback) {
-    //console.log(notification);
+    console.log(notification);
 
     log.info(`Processing Whatsapp session from customer: ${customer.customerNumber.number}`);
 
     //const userInput = (notification.text).toLowerCase();
 
+    console.log("This is our appdata: ", appData);
+
 
     let currentState = appData || { state: 'initialState' };
-    console.log("CS ", currentState)
-    const {state} = currentState
-    console.log("State ", state)
 
-    const nextState = await stateHandlers[state](notification, customer, appData);
+    // console.log("CS ", currentState)
+    const {state} = currentState
+    // console.log("State ", state)
+
+    const nextState = await stateHandlers[state](notification, customer, state);
+
+    console.log("This is the next state" , nextState);
 
 
     callback(null, nextState);
 }
+
+// async function onConnected () {
+//     const thisUser = new client.Customer({
+//         number: "+254771234567",
+//         provider: "cellular"
+//     });
+
+//     let resp = await thisUser.leaseAppData();
+
+//     console.log("This user data: ", resp);
+
+//     const deleteUserData = await thisUser.deleteAppData();
+
+//     console.log(deleteUserData);
+
+//     resp = await thisUser.leaseAppData();
+
+//     console.log(resp);
+
+//     resp = await thisUser.updateAppData({
+//         state: "callCustomerIssueState"
+//     });
+
+//     console.log(resp);
+// }
 
 const start = () => {
     client = new Elarian({
