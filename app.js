@@ -1,6 +1,5 @@
 require("dotenv").config();
 const { Elarian } = require("elarian");
-const { await } = require("signale");
 const log = require("signale");
 
 let client;
@@ -9,6 +8,7 @@ const whatsappChannel = {
     number: process.env.WHATSAPP_NUMBER,
     channel: "whatsapp"
 };
+
 const voiceChannel ={
     number: process.env.VOICE_NUMBER,
     channel: "voice"
@@ -156,7 +156,7 @@ const stateHandlers = {
                                 text: "We'll give you a call shortly",
                                 voice: "male"
                             },
-                        }
+                        },
                     ]
                 }
             });
@@ -198,34 +198,16 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
 
     console.log("This is the next state" , nextState);
 
-
-    callback(null, nextState);
+    await callback(null, nextState);
 }
 
-// async function onConnected () {
-//     const thisUser = new client.Customer({
-//         number: "+254771234567",
-//         provider: "cellular"
-//     });
+async function onMessageStatus (notification, customer, appData, callback) {
 
-//     let resp = await thisUser.leaseAppData();
+    console.log("On Message Status: ", appData);
 
-//     console.log("This user data: ", resp);
+    await callback(null, appData);
+}
 
-//     const deleteUserData = await thisUser.deleteAppData();
-
-//     console.log(deleteUserData);
-
-//     resp = await thisUser.leaseAppData();
-
-//     console.log(resp);
-
-//     resp = await thisUser.updateAppData({
-//         state: "callCustomerIssueState"
-//     });
-
-//     console.log(resp);
-// }
 
 const start = () => {
     client = new Elarian({
@@ -238,6 +220,7 @@ const start = () => {
         .on("error", (error) => log.error(`Something went wrong: ${error}`))
         .on("connected", () => log.success("App connected..."))
         .on("receivedWhatsapp", handleWhatsappMessages)
+        .on("messageStatus", onMessageStatus)
         .connect();
 };
 
