@@ -173,6 +173,8 @@ const stateHandlers = {
 
             log.error(`Something went wrong ${error}`);
 
+            return { state: "callCustomerIssueState" };
+
         }
 
     }
@@ -201,13 +203,6 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
     await callback(null, nextState);
 }
 
-async function onMessageStatus (notification, customer, appData, callback) {
-
-    console.log("On Message Status: ", appData);
-
-    await callback(null, appData);
-}
-
 
 const start = () => {
     client = new Elarian({
@@ -220,7 +215,6 @@ const start = () => {
         .on("error", (error) => log.error(`Something went wrong: ${error}`))
         .on("connected", () => log.success("App connected..."))
         .on("receivedWhatsapp", handleWhatsappMessages)
-        .on("messageStatus", onMessageStatus)
         .connect();
 };
 
