@@ -1,6 +1,7 @@
 require("dotenv").config();
 const { Elarian } = require("elarian");
 const log = require("signale");
+const { await } = require("signale/types");
 
 let client;
 
@@ -38,11 +39,15 @@ const stateHandlers = {
                 log.success(`First initial message sent: ${resp}`);
             }
 
-            return { state: "recordIssueState" };
+            await cust.updateAppData({
+                state: "recordIssueState"
+            });
         } catch (error) {
             log.error(`Something went wrong: ${error}`);
 
-            return { state: "initialState" };
+            await cust.updateAppData({
+                state: "initialState"
+            });
         }
     },
 
@@ -60,17 +65,16 @@ const stateHandlers = {
                         text: "We're sorry about the issue you faced with your order. Could you provide some more information on what happened?"
                     }
                 });
-                // cust.updateAppData({
-                //     state: "callCustomerIssueState"
-                // });
 
-                log.success(`Option 1 selected. Response: ${resp}`);
-
-                return { state: "callCustomerIssueState" }
+                await cust.updateAppData({
+                    state: "callCustomerIssueState"
+                });
             } catch (error) {
                 log.error(`Something went wrong: ${error}`);
 
-                return { state: "recordIssueState" }
+                await cust.updateAppData({
+                    state: "recordIssueState"
+                });
             }
 
         } else if (ntf.text === "2") {
@@ -84,11 +88,15 @@ const stateHandlers = {
 
                 log.success(`Option 2 selected. Response: ${resp}`);
 
-                return { state: "callCustomerIssueState" };
+                await cust.updateAppData({
+                    state: "callCustomerIssueState"
+                });
             } catch (error) {
                 log.error(`Something went wrong: ${error}`);
 
-                return { state: "recordIssueState" };
+                await cust.updateAppData({
+                    state: "recordIssueState"
+                });
             }
 
         } else if (ntf.text === "3") {
@@ -135,11 +143,15 @@ const stateHandlers = {
 
                 log.warn(`Things went wrong: ${resp}`);
 
-                return { state: "recordIssueState" };
+                await cust.updateAppData({
+                    state: "recordIssueState"
+                });
             } catch(error) {
                 log.error(error);
 
-                return { state: "recordIssueState" };
+                await cust.updateAppData({
+                    state: "recordIssueState"
+                });
             }
         }
     },
@@ -163,18 +175,17 @@ const stateHandlers = {
 
             log.info(`Customer called on number ${cust.customerNumber.number} with the following response: ${resp}`);
 
-            // const thisResp = await cust.deleteAppData();
+            const thisResp = await cust.deleteAppData();
 
-            // log.warn(`Here it is: ${JSON.stringify(thisResp, null, 2)}`);
-
-            return { state: "initialState" };
+            log.warn(`Here it is: ${JSON.stringify(thisResp, null, 2)}`);
 
         }  catch(error) {
 
             log.error(`Something went wrong ${error}`);
 
-            return { state: "callCustomerIssueState" };
-
+            await cust.updateAppData({
+                state: "callCustomerIssueState"
+            });
         }
 
     }
@@ -184,8 +195,6 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
     console.log(notification);
 
     log.info(`Processing Whatsapp session from customer: ${customer.customerNumber.number}`);
-
-    //const userInput = (notification.text).toLowerCase();
 
     console.log("This is our appdata: ", appData);
 
@@ -197,10 +206,6 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
     // console.log("State ", state)
 
     const nextState = await stateHandlers[state](notification, customer, state);
-
-    console.log("This is the next state" , nextState);
-
-    await callback(null, nextState);
 }
 
 
