@@ -189,18 +189,29 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
 
     console.log("This is our appdata: ", appData);
 
+    let currentState;
 
-    let currentState = appData || { state: 'initialState' };
+
+    // let currentState = appData || { state: 'initialState' }; // Probably where the error is coming from
+
+    if (!appData) {
+        currentState = {state: 'initialState'};
+    } else {
+        currentState = appData;
+        log.info(`Returning user at state: ${currentState}`);
+    }
 
     // console.log("CS ", currentState)
-    const {state} = currentState
+    const {state} = currentState;
     // console.log("State ", state)
 
     const nextState = await stateHandlers[state](notification, customer, state);
 
     console.log("This is the next state" , nextState);
 
-    await callback(null, nextState);
+    await customer.leaseAppData();
+
+    await customer.updateAppData(nextState);
 }
 
 
