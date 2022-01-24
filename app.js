@@ -60,9 +60,7 @@ const stateHandlers = {
                         text: "We're sorry about the issue you faced with your order. Could you provide some more information on what happened?"
                     }
                 });
-                // cust.updateAppData({
-                //     state: "callCustomerIssueState"
-                // });
+
 
                 log.success(`Option 1 selected. Response: ${resp}`);
 
@@ -163,9 +161,6 @@ const stateHandlers = {
 
             log.info(`Customer called on number ${cust.customerNumber.number} with the following response: ${resp}`);
 
-            // const thisResp = await cust.deleteAppData();
-
-            // log.warn(`Here it is: ${JSON.stringify(thisResp, null, 2)}`);
 
             return { state: "initialState" };
 
@@ -185,14 +180,9 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
 
     log.info(`Processing Whatsapp session from customer: ${customer.customerNumber.number}`);
 
-    //const userInput = (notification.text).toLowerCase();
-
     console.log("This is our appdata: ", appData);
 
     let currentState;
-
-
-    // let currentState = appData || { state: 'initialState' }; // Probably where the error is coming from
 
     if (!appData) {
         currentState = {state: 'initialState'};
@@ -201,9 +191,7 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
         log.info(`Returning user at state: ${currentState}`);
     }
 
-    // console.log("CS ", currentState)
     const {state} = currentState;
-    // console.log("State ", state)
 
     const nextState = await stateHandlers[state](notification, customer, state);
 
