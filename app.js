@@ -64,11 +64,15 @@ const stateHandlers = {
 
                 log.success(`Option 1 selected. Response: ${resp}`);
 
-                return { state: "callCustomerIssueState" }
+                return {
+                    state: "callCustomerIssueState"
+                }
             } catch (error) {
                 log.error(`Something went wrong: ${error}`);
 
-                return { state: "recordIssueState" }
+                return {
+                    state: "recordIssueState"
+                }
             }
 
         } else if (ntf.text === "2") {
@@ -82,11 +86,15 @@ const stateHandlers = {
 
                 log.success(`Option 2 selected. Response: ${resp}`);
 
-                return { state: "callCustomerIssueState" };
+                return {
+                    state: "callCustomerIssueState"
+                }
             } catch (error) {
                 log.error(`Something went wrong: ${error}`);
 
-                return { state: "recordIssueState" };
+                return {
+                    state: "recordIssueState"
+                }
             }
 
         } else if (ntf.text === "3") {
@@ -116,12 +124,16 @@ const stateHandlers = {
                     log.info(`Voice call made: ${voiceResp}`);
                 }, 5000);
 
-                return { state: "initialState" };
+                return {
+                    state: "initialState"
+                }
 
             } catch (error) {
                 log.error(`Something wrong: ${error}`);
 
-                return { state: "recordIssueState" };
+                return {
+                    state: "recordIssueState"
+                }
             }
         } else {
             try {
@@ -133,11 +145,16 @@ const stateHandlers = {
 
                 log.warn(`Things went wrong: ${resp}`);
 
-                return { state: "recordIssueState" };
+                return {
+                    state: "recordIssueState"
+                }
+
             } catch(error) {
                 log.error(error);
 
-                return { state: "recordIssueState" };
+                return {
+                    state: "recordIssueState"
+                }
             }
         }
     },
@@ -146,6 +163,13 @@ const stateHandlers = {
         console.log(ntf.text);
 
         try {
+            await cust.replyToMessage(ntf.messageId, {
+                body: {
+                    text: "We'll give you a call shortly"
+                }
+            });
+
+
             const resp = await cust.sendMessage(voiceChannel, {
                 body: {
                     voice: [
@@ -162,13 +186,21 @@ const stateHandlers = {
             log.info(`Customer called on number ${cust.customerNumber.number} with the following response: ${resp}`);
 
 
-            return { state: "initialState" };
+            return {
+                state: "initialState"
+            }
 
         }  catch(error) {
 
             log.error(`Something went wrong ${error}`);
 
-            return { state: "callCustomerIssueState" };
+            //return { state: "callCustomerIssueState" };
+
+            return {
+                state: "callCustomerIssueState"
+            }
+
+            // issueCount, issueDescription
 
         }
 
@@ -184,7 +216,7 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
 
     let currentState;
 
-    if (!appData) {
+    if (!appData || appData.state === undefined) {
         currentState = {state: 'initialState'};
     } else {
         currentState = appData;
@@ -193,13 +225,11 @@ async function handleWhatsappMessages(notification, customer, appData, callback)
 
     const {state} = currentState;
 
-    const nextState = await stateHandlers[state](notification, customer, state);
+    const nextState = await stateHandlers[state](notification, customer, state, callback);
 
     console.log("This is the next state" , nextState);
 
-    await customer.leaseAppData();
-
-    await customer.updateAppData(nextState);
+    callback(null, nextState);
 }
 
 
